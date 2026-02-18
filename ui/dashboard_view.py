@@ -60,25 +60,24 @@ class DashboardView(ft.Container):
 
         # Hero Section (Battery & Range)
         self.hero_section = ft.Container(
-            content=ft.Column([
+            content=ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                ft.Text(self.vehicle_name, size=24, weight="bold", color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
+                ft.Container(height=10),
                 ft.Row([
-                    ft.Text(self.vehicle_name, size=24, weight="bold", color=ft.Colors.WHITE),
-                    ft.Row([
-                        ft.IconButton(
-                            icon=ft.icons.Icons.LOGOUT,
-                            icon_color=ft.Colors.RED_400,
-                            tooltip="Logout",
-                            on_click=self.handle_logout
-                        ),
-                        ft.IconButton(
-                            icon=ft.icons.Icons.REFRESH,
-                            icon_color=ft.Colors.CYAN_200,
-                            tooltip="Refresh Data",
-                            on_click=self.refresh_data
-                        ),
-                        ft.Icon(ft.icons.Icons.ELECTRIC_CAR, color=ft.Colors.CYAN_200, size=28)
-                    ])
-                ], alignment="spaceBetween"),
+                    ft.IconButton(
+                        icon=ft.icons.Icons.REFRESH,
+                        icon_color=ft.Colors.CYAN_200,
+                        tooltip="Refresh Data",
+                        on_click=self.refresh_data
+                    ),
+                    ft.IconButton(
+                        icon=ft.icons.Icons.LOGOUT,
+                        icon_color=ft.Colors.RED_400,
+                        tooltip="Logout",
+                        on_click=self.handle_logout
+                    ),
+                    ft.Icon(ft.icons.Icons.ELECTRIC_CAR, color=ft.Colors.CYAN_200, size=28)
+                ], alignment=ft.MainAxisAlignment.CENTER),
                 ft.Container(height=20),
                 ft.Column([
                     ft.Row([
@@ -127,10 +126,12 @@ class DashboardView(ft.Container):
                         ft.Container(height=10),
                         self.controls_view,
                         ft.Container(height=10),
-                        ft.Column([
-                            self.status_text,
-                            self.last_updated
-                        ], horizontal_alignment="center", spacing=2)
+                        ft.Row([
+                            ft.Column([
+                                self.status_text,
+                                self.last_updated
+                            ], horizontal_alignment="center", spacing=2)
+                        ], alignment=ft.MainAxisAlignment.CENTER)
                     ])
                 )
             ]

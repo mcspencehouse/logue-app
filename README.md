@@ -56,12 +56,12 @@ If you prefer to run the app in development mode or build your own APK:
    pip install -r requirements.txt
    ```
 
-3. **Configure Environment Variables**:
-   Create a `.env` file in the root directory:
-   ```env
-   HONDA_CLIENT_SECRET=your_client_secret
-   ENCRYPTION_KEY=your_encryption_key
+3. **Generate Secrets & Configuration**:
+   Run the included helper script to automatically generate your encryption key and set up the default configuration in `.env`:
+   ```bash
+   python3 service/secret_manager.py
    ```
+   This will create a `.env` file with a secure `ENCRYPTION_KEY` and the default `HONDA_CLIENT_SECRET`.
 
 4. **Run locally**:
    ```bash

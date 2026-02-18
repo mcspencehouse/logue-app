@@ -1,6 +1,9 @@
 import os
 from dotenv import load_dotenv
+from service.secret_manager import ensure_secrets
 
+# Ensure secrets exist before loading
+ensure_secrets()
 load_dotenv()
 
 class Config:
