@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Flet / Flutter
+build/
+dist/
+
+# System
+.DS_Store
+Thumbs.db

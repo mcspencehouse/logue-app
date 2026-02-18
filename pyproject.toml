@@ -1,0 +1,7 @@
+[project]
+name = "logue"
+version = "0.1.0"
+description = "Logue App for Honda Prologue"
+
+[tool.flet]
+product = "Logue"
