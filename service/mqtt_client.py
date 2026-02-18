@@ -3,7 +3,10 @@ import ssl
 import json
 import time
 import threading
+import logging
 from service.config import Config
+
+logger = logging.getLogger(__name__)
 
 class AwsMqttClient:
     def __init__(self, vin, cig_token, cig_signature, on_message_callback):
@@ -18,8 +21,8 @@ class AwsMqttClient:
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=client_id, transport="websockets")
         self.client.username_pw_set(username=None, password=None)
         
-        # TLS required for AWS IoT
-        self.client.tls_set(cert_reqs=ssl.CERT_NONE)
+        # TLS required for AWS IoT - ENFORCE server certificate verification
+        self.client.tls_set(cert_reqs=ssl.CERT_REQUIRED)
         
         # Set Custom Headers for Authentication
         headers = {
@@ -42,7 +45,7 @@ class AwsMqttClient:
     def connect(self):
         try:
             # Config.MQTT_HOST is the endpoint
-            print(f"Connecting to {Config.MQTT_HOST}...")
+            logger.info(f"Connecting to {Config.MQTT_HOST}...")
             self.client.connect(Config.MQTT_HOST, 443, 60)
             self.client.loop_start()
             
@@ -56,7 +59,7 @@ class AwsMqttClient:
                  
             return True
         except Exception as e:
-            print(f"MQTT Connect failed: {e}")
+            logger.error(f"MQTT Connect failed: {e}")
             raise e
 
     def disconnect(self):
@@ -64,22 +67,22 @@ class AwsMqttClient:
         self.client.disconnect()
 
     def subscribe(self, topic):
-        print(f"Subscribing to {topic}")
+        logger.debug(f"Subscribing to {topic}")
         self.client.subscribe(topic, qos=1)
 
     def _on_connect(self, client, userdata, flags, rc):
         if rc == 0:
-            print("AWS IoT MQTT connected")
+            logger.info("AWS IoT MQTT connected")
             self.connected_event.set()
         else:
             self.connection_error = f"Connection failed with code {rc}"
             self.connected_event.set() # Release wait so we can raise error
 
     def _on_disconnect(self, client, userdata, rc):
-        print(f"AWS IoT MQTT disconnected: {rc}")
+        logger.info(f"AWS IoT MQTT disconnected: {rc}")
 
     def _on_message(self, client, userdata, msg):
         payload = msg.payload.decode()
-        # print(f"Received message on {msg.topic}: {payload}")
+        # logger.debug(f"Received message on {msg.topic}: {payload}")
         if self.on_message_callback:
             self.on_message_callback(msg.topic, payload)

@@ -2,6 +2,9 @@ from service.api import HondaApi
 import json
 import os
 from cryptography.fernet import Fernet
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AuthService:
     def __init__(self, page, storage):
@@ -19,7 +22,7 @@ class AuthService:
             self.fernet = Fernet(encryption_key.encode())
         else:
             self.fernet = None
-            print("WARNING: No ENCRYPTION_KEY found. Credentials will be stored in plain text.")
+            logger.warning("No ENCRYPTION_KEY found. Credentials will be stored in plain text.")
         
     async def load_credentials(self):
         """Load credentials and decrypt sensitive fields"""
@@ -65,7 +68,7 @@ class AuthService:
         try:
             return self.fernet.decrypt(value.encode()).decode()
         except Exception as e:
-            print(f"Decryption failed: {e}")
+            logger.error(f"Decryption failed: {e}")
             return None
 
     def login(self, username, password, vin=None):

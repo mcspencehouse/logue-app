@@ -3,6 +3,9 @@ import json
 import uuid
 import datetime
 from service.config import Config
+import logging
+
+logger = logging.getLogger(__name__)
 
 class HondaApi:
     @staticmethod
@@ -238,9 +241,9 @@ class HondaApi:
              "pin": pin
          }
          
-         print(f"DEBUG: Remote Command Request - URL: {url}, Payload: [REDACTED]")
+         logger.debug(f"Remote Command Request - URL: {url}, Payload: [REDACTED]")
          resp = requests.post(url, headers=headers, json=payload)
-         print(f"DEBUG: Remote Command Response - Status: {resp.status_code}, Body: {resp.text}")
+         logger.debug(f"Remote Command Response - Status: {resp.status_code}, Body: {resp.text}")
          data = resp.json()
          
          if resp.ok and data.get("status") in ["IN_PROGRESS", "success"]:

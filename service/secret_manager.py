@@ -38,6 +38,9 @@ def ensure_secrets():
     # Use known default for the client ID if not present
     if "HONDA_CLIENT_SECRET=" not in existing_content:
         logger.info("Setting default HONDA_CLIENT_SECRET...")
+        # WARNING: This is a default client secret for the Honda/Acura mobile app.
+        # It is theoretically public but should be treated with care.
+        # If you have your own, please set HONDA_CLIENT_SECRET in your .env file or environment.
         default_secret = "q4w5hzeqkFVMPQaeKuil"
         updates.append(f"HONDA_CLIENT_SECRET={default_secret}")
         if "HONDA_CLIENT_SECRET" not in os.environ:

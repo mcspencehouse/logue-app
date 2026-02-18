@@ -77,10 +77,12 @@ If you prefer to run the app in development mode or build your own APK:
 
 **Logue is designed with a "Privacy First" architecture:**
 
-- **Zero External Tracking**: This application does not send your data, login credentials, or vehicle information to any third-party infrastructure. All communication is directly between the app and the official Honda/Acura APIs.
+- **Zero External Tracking**: This application does not send your data, login credentials, or vehicle information to any third-party infrastructure. All communication is directly between the app and the official Honda/Acura API.
 - **Local Credential Storage**: Your HondaLink credentials and vehicle PIN are stored exclusively on your device. We use Android's native `SharedPreferences` for storage.
 - **Encryption**: Sensitive data (passwords, PINs) are encrypted using **Fernet (AES-128)** symmetric encryption before being saved locally. 
 - **Environment Security**: The encryption key is sourced from your local `.env` file, ensuring that your data remains unreadable even if the storage files are accessed on the device.
+
+> **Note on Client Secrets**: This application uses a default Honda client ID/secret to emulate the official mobile app. While this is standard for third-party clients, advanced users may wish to provide their own credentials in the `.env` file.
 
 ## Development Note
 
@@ -89,6 +91,10 @@ This project was developed using a "vibe coding" approach—leveraging advanced 
 ## Build and Versioning
 
 The app is configured via `pyproject.toml` and `flet.yaml` for Android compilation. For APK generation, ensure you have the Flet CLI installed.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 *Disclaimer: This app is not affiliated with American Honda Motor Co., Inc. Use remote commands responsibly.*

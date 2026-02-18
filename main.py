@@ -1,4 +1,18 @@
 import flet as ft
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+logger = logging.getLogger(__name__)
+
 from service.auth import AuthService
 from ui.login_view import LoginView
 from ui.dashboard_view import DashboardView
