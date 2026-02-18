@@ -33,7 +33,7 @@ This project stands on the shoulders of giants:
 ### Option 1: Install the Android APK (Recommended)
 The easiest way to get Logue on your device is to download the latest release:
 1.  Navigate to the **[Releases](https://github.com/mcspencehouse/logue-app/releases)** page of this repository.
-2.  Download the `app-release.apk` file to your Android device.
+2.  Download the `logue-X.X.X.apk` file to your Android device.
 3.  Open the file and follow the prompts to install. 
     *Note: You may need to enable "Install from unknown sources" in your device settings.*
 
