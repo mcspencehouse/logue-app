@@ -42,6 +42,18 @@ class AuthService:
         if pin is not None: 
             await self.storage.set("honda_pin", self._encrypt(pin))
 
+    async def logout(self):
+        """Clear all stored credentials"""
+        await self.storage.remove("honda_username")
+        await self.storage.remove("honda_password")
+        await self.storage.remove("honda_vin")
+        await self.storage.remove("honda_pin")
+        self.access_token = None
+        self.hidas_ident = None
+        self.user_info = None
+        self.vehicles = []
+        self.selected_vin = None
+
     def _encrypt(self, value):
         if not value or not self.fernet:
             return value

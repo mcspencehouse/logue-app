@@ -10,9 +10,10 @@ import time
 import asyncio
 
 class DashboardView(ft.Container):
-    def __init__(self, page, auth_service: AuthService):
+    def __init__(self, page, auth_service: AuthService, on_logout):
         super().__init__(expand=True)
         self.auth_service = auth_service
+        self.on_logout = on_logout
         self.mqtt_client = None
         self.is_connected = False
         
@@ -63,6 +64,12 @@ class DashboardView(ft.Container):
                 ft.Row([
                     ft.Text(self.vehicle_name, size=24, weight="bold", color=ft.Colors.WHITE),
                     ft.Row([
+                        ft.IconButton(
+                            icon=ft.icons.Icons.LOGOUT,
+                            icon_color=ft.Colors.RED_400,
+                            tooltip="Logout",
+                            on_click=self.handle_logout
+                        ),
                         ft.IconButton(
                             icon=ft.icons.Icons.REFRESH,
                             icon_color=ft.Colors.CYAN_200,
@@ -224,6 +231,12 @@ class DashboardView(ft.Container):
         self.status_text.value = "Requesting update..."
         self.update()
         await self._do_refresh()
+
+    async def handle_logout(self, e):
+        if self.mqtt_client:
+            self.mqtt_client.disconnect()
+        if self.on_logout:
+            await self.on_logout()
         
     def update_dashboard_ui(self, data):
         reported = data.get("state", {}).get("reported", {})

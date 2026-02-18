@@ -28,17 +28,26 @@ This project stands on the shoulders of giants:
 - **Communication**: MQTT (AWS IoT Core) for real-time updates
 - **Backend API**: Integration with Honda/Acura Identity and Web Services
 
-## Getting Started
+## Installation & Setup
 
-### Prerequisites
+### Option 1: Install the Android APK (Recommended)
+The easiest way to get Logue on your device is to download the latest release:
+1.  Navigate to the **[Releases](https://github.com/mcspencehouse/logue-app/releases)** page of this repository.
+2.  Download the `app-release.apk` file to your Android device.
+3.  Open the file and follow the prompts to install. 
+    *Note: You may need to enable "Install from unknown sources" in your device settings.*
+
+### Option 2: Building from Source (Advanced)
+If you prefer to run the app in development mode or build your own APK:
+
+#### Prerequisites
 - Python 3.9+
-- A valid HondaLink / AcuraLink account
+- [Flet CLI](https://flet.dev/docs/guides/python/deploying-apps/android/) (if building for Android)
 
-### Installation
-
+#### Setup
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/logue-app.git
+   git clone https://github.com/mcspencehouse/logue-app.git
    cd logue-app
    ```
 
@@ -48,16 +57,30 @@ This project stands on the shoulders of giants:
    ```
 
 3. **Configure Environment Variables**:
-   Create a `.env` file in the root directory with the following:
+   Create a `.env` file in the root directory:
    ```env
    HONDA_CLIENT_SECRET=your_client_secret
    ENCRYPTION_KEY=your_encryption_key
    ```
 
-4. **Run the application**:
+4. **Run locally**:
    ```bash
    flet run main.py
    ```
+
+5. **Build your own APK**:
+   ```bash
+   flet build apk
+   ```
+
+## Security & Privacy
+
+**Logue is designed with a "Privacy First" architecture:**
+
+- **Zero External Tracking**: This application does not send your data, login credentials, or vehicle information to any third-party infrastructure. All communication is directly between the app and the official Honda/Acura APIs.
+- **Local Credential Storage**: Your HondaLink credentials and vehicle PIN are stored exclusively on your device. We use Android's native `SharedPreferences` for storage.
+- **Encryption**: Sensitive data (passwords, PINs) are encrypted using **Fernet (AES-128)** symmetric encryption before being saved locally. 
+- **Environment Security**: The encryption key is sourced from your local `.env` file, ensuring that your data remains unreadable even if the storage files are accessed on the device.
 
 ## Development Note
 

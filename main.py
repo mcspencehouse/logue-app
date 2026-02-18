@@ -21,11 +21,20 @@ async def main(page: ft.Page):
         page.add(ft.Text("Login Successful! Loading Dashboard...", size=20))
         page.update()
         
-        dashboard = DashboardView(page, auth_service)
+        dashboard = DashboardView(page, auth_service, on_logout=on_logout)
         page.clean()
         page.vertical_alignment = ft.MainAxisAlignment.START
         page.horizontal_alignment = ft.CrossAxisAlignment.START
         page.add(dashboard)
+        page.update()
+
+    async def on_logout():
+        await auth_service.logout()
+        page.clean()
+        page.vertical_alignment = ft.MainAxisAlignment.START
+        page.horizontal_alignment = ft.CrossAxisAlignment.START
+        login_view = LoginView(page, auth_service, on_login_success)
+        page.add(login_view)
         page.update()
 
     # Create loading view
@@ -50,7 +59,7 @@ async def main(page: ft.Page):
         # Run login in thread to avoid blocking UI
         import asyncio
         loop = asyncio.get_running_loop()
-        success, message = await loop.run_in_executor(None, lambda: auth_service.login(username, password, vin))
+        success, message = await loop.run_in_executor(None, lambda: auth_service.login(username, password))
         
         if success:
             await on_login_success()

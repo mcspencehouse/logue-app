@@ -10,9 +10,8 @@ class LoginView(ft.Container):
         
         # self.auth_service.load_credentials() # Moved to did_mount
         
-        self.username_input = ft.TextField(label="Username")
-        self.password_input = ft.TextField(label="Password", password=True, can_reveal_password=True)
-        self.vin_input = ft.TextField(label="VIN (Optional)", hint_text="Leave empty to auto-select first vehicle")
+        self.username_input = ft.TextField(label="HondaLink Email Address")
+        self.password_input = ft.TextField(label="HondaLink Password", password=True, can_reveal_password=True)
         
         self.error_text = ft.Text(color="red")
         self.login_button = ft.FilledButton("Login", on_click=self.handle_login)
@@ -21,10 +20,9 @@ class LoginView(ft.Container):
         # Content setup (Moved from build)
         self.content = ft.Column(
             controls=[
-                ft.Text("HondaStink Login", size=30, weight="bold"),
+                ft.Text("Logue Login", size=30, weight="bold"),
                 self.username_input,
                 self.password_input,
-                self.vin_input,
                 ft.Row([self.login_button, self.progress_ring], alignment="center"),
                 self.error_text
             ],
@@ -42,7 +40,6 @@ class LoginView(ft.Container):
         username, password, vin, pin = await self.auth_service.load_credentials()
         self.username_input.value = username or ""
         self.password_input.value = password or ""
-        self.vin_input.value = vin or ""
         self.update()
 
     def handle_login(self, e):
@@ -56,10 +53,9 @@ class LoginView(ft.Container):
         
         username = self.username_input.value
         password = self.password_input.value
-        vin = self.vin_input.value
         
         if not username or not password:
-            self.error_text.value = "Username and Password are required"
+            self.error_text.value = "Email and Password are required"
             self.login_button.disabled = False
             self.progress_ring.visible = False
             self.update()
@@ -70,26 +66,12 @@ class LoginView(ft.Container):
         loop = asyncio.get_running_loop()
         
         def login_task():
-            return self.auth_service.login(username, password, vin)
+            return self.auth_service.login(username, password)
             
         success, message = await loop.run_in_executor(None, login_task)
         
         if success:
-            # Check if VIN provided matches found vehicles, else use first
-            if vin:
-               # basic check
-               found = False
-               for v in self.auth_service.vehicles:
-                   if v.get('VIN') == vin:
-                       self.auth_service.selected_vin = vin
-                       found = True
-                       break
-               if not found:
-                   message = f"Warning: VIN {vin} not found, using {self.auth_service.selected_vin}"
-                   # Update the input to reflect reality
-                   vin = self.auth_service.selected_vin
-
-            # Save credentials (PIN is no longer used but kept in storage contract)
+            # Save credentials
             await self.auth_service.save_credentials(username, password, self.auth_service.selected_vin, None)
             
             await self.on_login_success()
