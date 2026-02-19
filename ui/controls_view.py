@@ -14,11 +14,12 @@ class CounterControl(ft.Row):
         self.on_change = on_change
         self.alignment = ft.MainAxisAlignment.CENTER
         self.vertical_alignment = ft.CrossAxisAlignment.CENTER
+        self.spacing = 20
         
-        self.txt_value = ft.Text(f"{self.current_value}{self.unit}", size=40, weight=ft.FontWeight.BOLD)
+        self.txt_value = ft.Text(f"{self.current_value}{self.unit}", size=30, weight="bold", color=ft.Colors.WHITE)
         
-        self.btn_minus = ft.IconButton(icon=ft.icons.Icons.REMOVE, icon_size=30, on_click=self.minus_click)
-        self.btn_plus = ft.IconButton(icon=ft.icons.Icons.ADD, icon_size=30, on_click=self.plus_click)
+        self.btn_minus = ft.IconButton(icon=ft.icons.Icons.REMOVE_CIRCLE_OUTLINE, icon_color=ft.Colors.WHITE_54, icon_size=30, on_click=self.minus_click)
+        self.btn_plus = ft.IconButton(icon=ft.icons.Icons.ADD_CIRCLE_OUTLINE, icon_color=ft.Colors.WHITE_54, icon_size=30, on_click=self.plus_click)
         
         self.controls = [self.btn_minus, self.txt_value, self.btn_plus]
         
@@ -42,57 +43,57 @@ class CounterControl(ft.Row):
     def value(self):
         return self.current_value
 
-class ControlsView(ft.Card):
+class ControlsView(ft.Column): # Changed from Card to Column for transparency
     def __init__(self, page, auth_service: AuthService, mqtt_client):
         super().__init__()
         self.main_page = page
-        print(f"DEBUG: ControlsView init with page: {page}")
         self.auth_service = auth_service
         self.mqtt_client = mqtt_client
+        self.spacing = 15
         
         # Modern Counter Controls
         self.temp_control = CounterControl(value=72, min_value=57, max_value=87, step=1, unit="°F")
-        self.charge_control = CounterControl(value=80, min_value=50, max_value=100, step=10, unit="%") 
         
-        # self.climate_status_text = ft.Text("Status: --", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_400)
+        # Helper to create styled action buttons
+        def action_button(text, icon, color, on_click):
+             return ft.Container(
+                content=ft.Row([
+                    ft.Icon(icon, color=ft.Colors.WHITE),
+                    ft.Text(text, weight="bold", color=ft.Colors.WHITE)
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+                on_click=on_click,
+                bgcolor=color,
+                padding=15,
+                border_radius=10,
+                expand=True,
+                ink=True
+             )
 
-        # Climate Controls
-        climate_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Text("Climate Control", size=20, weight=ft.FontWeight.BOLD),
-                    ft.Container(height=10), # Spacer
-                    self.temp_control,
-                    ft.Container(height=10), # Spacer
-                    ft.Row([
-                        ft.ElevatedButton("Start Climate", icon="thermostat", on_click=lambda _: self.confirm_action("Start Climate", self.start_climate)),
-                        ft.ElevatedButton("Stop Climate", icon="power_settings_new", on_click=lambda _: self.confirm_action("Stop Climate", self.stop_climate))
-                    ], alignment=ft.MainAxisAlignment.CENTER),
-                ], spacing=5),
-                padding=20
-            )
+        # Climate Controls Section
+        climate_section = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.Icons.THERMOSTAT, color=ft.Colors.CYAN_200),
+                    ft.Text("CLIMATE CONTROL", size=12, weight="bold", color=ft.Colors.WHITE_70)
+                ]),
+                ft.Container(height=10),
+                self.temp_control,
+                ft.Container(height=10),
+                ft.Row([
+                    action_button("ON", ft.icons.Icons.POWER_SETTINGS_NEW, ft.Colors.CYAN_400, lambda _: self.confirm_action("Start Climate", self.start_climate)),
+                    action_button("OFF", ft.icons.Icons.POWER_OFF, ft.Colors.RED_900 if False else ft.Colors.GREY_800, lambda _: self.confirm_action("Stop Climate", self.stop_climate))
+                ], spacing=10)
+            ]),
+            padding=20,
+            border_radius=15,
+            bgcolor=ft.Colors.WHITE_10,
+            border=ft.Border.all(1, ft.Colors.WHITE_10)
         )
 
-        # Charge Control
-        charge_card = ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Text("Charging", size=20, weight=ft.FontWeight.BOLD),
-                    ft.Container(height=10), # Spacer
-                    ft.Text("Max Charge Target"),
-                    self.charge_control,
-                    ft.Container(height=10), # Spacer
-                    ft.ElevatedButton("Set Charge Limit", icon="battery_charging_full", on_click=lambda _: self.confirm_action("Set Charge Limit", self.set_charge_target, require_pin=False))
-                ], spacing=5),
-                padding=20
-            )
-        )
 
-        self.content = ft.Column([
-            climate_card,
-            # remote_card,
-            charge_card
-        ], spacing=10, scroll=ft.ScrollMode.AUTO)
+        self.controls = [
+            climate_section
+        ]
 
     def confirm_action(self, action_name, action_callback, require_pin=True):
         print(f"DEBUG: confirm_action triggered for {action_name}")
@@ -210,15 +211,6 @@ class ControlsView(ft.Card):
         )
 
     # Removed non-functional buttons logic
-
-    def set_charge_target(self, pin):
-        target = int(self.charge_control.value)
-        HondaApi.request_set_charge_target(
-            self.auth_service.access_token,
-            self.auth_service.selected_vin,
-            pin,
-            target
-        )
 
     def update_climate_status(self, status):
         pass

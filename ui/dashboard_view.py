@@ -12,6 +12,7 @@ import asyncio
 class DashboardView(ft.Container):
     def __init__(self, page, auth_service: AuthService, on_logout):
         super().__init__(expand=True)
+        self.main_page = page
         self.auth_service = auth_service
         self.on_logout = on_logout
         self.mqtt_client = None
@@ -21,8 +22,8 @@ class DashboardView(ft.Container):
         self.vehicle_name = self.auth_service.get_vehicle_name()
         self.battery_text = ft.Text("-- %", size=48, weight="bold", color=ft.Colors.WHITE)
         self.range_text = ft.Text("-- miles", size=24, color=ft.Colors.WHITE)
-        self.charge_status_text = ft.Text("--", size=16, weight="w500", color=ft.Colors.CYAN_100)
-        self.charge_details_text = ft.Text("--", size=14, italic=True, color=ft.Colors.CYAN_100)
+        self.charge_status_text = ft.Text("--", size=16, weight="bold", color=ft.Colors.GREEN_400)
+        self.charge_details_text = ft.Text("--", size=13, weight="w500", color=ft.Colors.BLUE_GREY_200)
         self.odometer_text = ft.Text("-- miles", size=18, weight="w600")
         self.status_text = ft.Text("Connecting...", italic=True, size=12, color="secondary")
         self.last_updated = ft.Text("Last Updated: Never", size=12, color="secondary")
@@ -59,81 +60,176 @@ class DashboardView(ft.Container):
         ], spacing=10)
 
         # Hero Section (Battery & Range)
-        self.hero_section = ft.Container(
-            content=ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                ft.Text(self.vehicle_name, size=24, weight="bold", color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
-                ft.Container(height=10),
+        # Hero Section (Battery & Range) - Redesigned
+        
+        # Ring Progress for Battery
+        self.battery_ring = ft.ProgressRing(
+            value=0.0, 
+            stroke_width=20, 
+            color=ft.Colors.CYAN_400, 
+            bgcolor=ft.Colors.WHITE_10,
+            width=250,
+            height=250
+        )
+        
+        # Center Content for Ring
+        ring_content = ft.Column(
+            controls=[
+                ft.Icon(ft.icons.Icons.BOLT, color=ft.Colors.CYAN_400, size=30),
+                self.battery_text,
+                self.range_text,
+                ft.Text("RANGE", size=12, color=ft.Colors.CYAN_100, weight="bold"),
+                ft.IconButton(
+                    icon=ft.icons.Icons.SETTINGS, 
+                    icon_color=ft.Colors.WHITE_54, 
+                    icon_size=20, 
+                    tooltip="Set Charge Limit",
+                    on_click=self.open_charge_settings
+                )
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=0
+        )
+
+        # Main Battery Indicator Stack
+        battery_indicator = ft.Stack(
+            controls=[
+                # Glow effect container
+                ft.Container(
+                    width=250, height=250,
+                    border_radius=125,
+                    shadow=ft.BoxShadow(
+                        spread_radius=0,
+                        blur_radius=50,
+                        color=ft.Colors.CYAN_900,
+                        offset=ft.Offset(0, 0),
+                    ),
+                ),
+                self.battery_ring,
+                ft.Container(
+                    content=ring_content,
+                    alignment=ft.Alignment(0, 0),
+                    width=250, 
+                    height=250
+                )
+            ],
+            alignment=ft.Alignment(0, 0)
+        )
+
+        # Header Row
+        header_row = ft.Row(
+            controls=[
+                ft.Text(self.vehicle_name, size=20, weight="bold", color=ft.Colors.CYAN_200, font_family="Roboto Mono"),
+                ft.Container(expand=True),
+                ft.IconButton(
+                    icon=ft.icons.Icons.REFRESH,
+                    icon_color=ft.Colors.WHITE_54,
+                    tooltip="Refresh Data",
+                    on_click=self.refresh_data
+                ),
+                ft.IconButton(
+                    icon=ft.icons.Icons.LOGOUT, # Styled logout
+                    icon_color=ft.Colors.WHITE_54,
+                    tooltip="Logout",
+                    on_click=self.handle_logout
+                )
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+        )
+
+        # Charging Status Card (Mockup Style)
+        # Gradient border effect using Container with gradient background and padding
+        self.charging_card = ft.Container(
+            content=ft.Column([
                 ft.Row([
-                    ft.IconButton(
-                        icon=ft.icons.Icons.REFRESH,
-                        icon_color=ft.Colors.CYAN_200,
-                        tooltip="Refresh Data",
-                        on_click=self.refresh_data
-                    ),
-                    ft.IconButton(
-                        icon=ft.icons.Icons.LOGOUT,
-                        icon_color=ft.Colors.RED_400,
-                        tooltip="Logout",
-                        on_click=self.handle_logout
-                    ),
-                    ft.Icon(ft.icons.Icons.ELECTRIC_CAR, color=ft.Colors.CYAN_200, size=28)
-                ], alignment=ft.MainAxisAlignment.CENTER),
-                ft.Container(height=20),
-                ft.Column([
-                    ft.Row([
-                        self.battery_text,
-                        ft.Icon(ft.icons.Icons.BATTERY_CHARGING_FULL, color=ft.Colors.GREEN_400, size=40)
-                    ], alignment="center", spacing=10),
-                    self.range_text,
-                ], horizontal_alignment="center"),
-                ft.Container(height=10),
-                ft.Column([
+                    ft.Text("CHARGING STATUS", size=12, weight="bold", color=ft.Colors.WHITE_70),
+                    ft.Container(expand=True),
+                    ft.Icon(ft.icons.Icons.BOLT, col={"xs":0, "sm": 0}, color=ft.Colors.GREEN_400) # Hidden bolt, maybe use for active status
+                ]),
+                ft.Container(height=5),
+                ft.Row([
                     self.charge_status_text,
-                    self.charge_details_text,
-                ], horizontal_alignment="center", spacing=2),
+                    ft.Container(expand=True),
+                    # Graphic for charging curve could go here, simplified for now
+                    ft.Icon(ft.icons.Icons.GRAPHIC_EQ, color=ft.Colors.GREEN_400, size=30, opacity=0.5) 
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Divider(color=ft.Colors.WHITE_10, height=20),
+                ft.Row([
+                    self.charge_details_text
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
             ]),
-            padding=ft.Padding.only(top=50, left=30, right=30, bottom=30),
+            padding=20,
+            border_radius=15,
             gradient=ft.LinearGradient(
                 begin=ft.Alignment.TOP_LEFT,
                 end=ft.Alignment.BOTTOM_RIGHT,
-                colors=[ft.Colors.BLUE_900, ft.Colors.BLUE_800, ft.Colors.INDIGO_900],
+                colors=[ft.Colors.WHITE_10, ft.Colors.WHITE_10]
             ),
-            border_radius=ft.BorderRadius.only(bottom_left=30, bottom_right=30),
-            margin=ft.Margin.only(bottom=10)
+            border=ft.Border.all(1, ft.Colors.GREEN_400), # Green border to match mockup "glow"
+            shadow=ft.BoxShadow(
+                spread_radius=0,
+                blur_radius=20,
+                color=ft.Colors.GREEN_900,
+                offset=ft.Offset(0, 0),
+            )
         )
 
+        # Climate Control Section
         self.controls_view = ControlsView(page, self.auth_service, self.mqtt_client)
+
+        # Vehicle Image / Tire Pressure Section
+        # This mirrors the bottom of the mockup
+        self.tire_section_container = ft.Container(
+            content=ft.Column([
+                ft.Text("TIRE PRESSURE", size=12, weight="bold", color=ft.Colors.WHITE_70),
+                ft.Container(height=10),
+                # Use a specific layout for tires: 
+                # L Top   R Top
+                #    [CAR]
+                # L Bot   R Bot
+                # For now, sticking to the Grid but styling it better
+                self.tires_grid
+            ]),
+            padding=20,
+            border_radius=15,
+            bgcolor=ft.Colors.WHITE_10,
+            border=ft.Border.all(1, ft.Colors.WHITE_10)
+        )
+
+        # Assemble Main Layout
+        self.hero_section = ft.Container(
+            content=ft.Column([
+                header_row,
+                ft.Container(height=20),
+                battery_indicator,
+                ft.Container(height=30),
+                self.charging_card,
+                ft.Container(height=10),
+                # Climate Control is injected via ControlsView
+                self.controls_view, 
+                ft.Container(height=10),
+                self.tire_section_container,
+                ft.Container(height=10),
+                ft.Row([
+                    self.status_text,
+                    self.last_updated
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10)
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.only(top=50, left=20, right=20, bottom=20),
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment.TOP_CENTER,
+                end=ft.Alignment.BOTTOM_CENTER,
+                colors=["#1a1b1e", "#000000"]
+            )
+        )
         
-        # Main Layout with ListView and RefreshIndicator
+        # Main Layout with ListView
         self.list_view = ft.ListView(
             expand=True,
-            spacing=10,
-            padding=ft.Padding.only(bottom=20),
+            padding=0,
             controls=[
-                self.hero_section,
-                ft.Container(
-                    padding=ft.Padding.symmetric(horizontal=20),
-                    content=ft.Column([
-                        ft.Row([
-                            ft.Icon(ft.icons.Icons.SPEED, size=20, color="secondary"),
-                            ft.Text("Odometer", size=14, color="secondary"),
-                            ft.Container(expand=True),
-                            self.odometer_text
-                        ], alignment="center"),
-                        ft.Divider(color=ft.Colors.WHITE_10),
-                        ft.Text("Tire Pressures", size=16, weight="bold"),
-                        self.tires_grid,
-                        ft.Container(height=10),
-                        self.controls_view,
-                        ft.Container(height=10),
-                        ft.Row([
-                            ft.Column([
-                                self.status_text,
-                                self.last_updated
-                            ], horizontal_alignment="center", spacing=2)
-                        ], alignment=ft.MainAxisAlignment.CENTER)
-                    ])
-                )
+                self.hero_section
             ]
         )
 
@@ -246,19 +342,6 @@ class DashboardView(ft.Container):
         if self.on_logout:
             await self.on_logout()
         
-    def update_dashboard_ui(self, data):
-        reported = data.get("state", {}).get("reported", {})
-        
-        # Data is inside reported -> responseBody
-        rb = reported.get("responseBody", {})
-        
-        # Save full response to file for debugging/analysis
-        # try:
-        #     with open("last_api_dump_ON.json", "w") as f:
-        #         json.dump(rb, f, indent=4)
-        #     print("DEBUG: Saved API response to last_api_dump.json")
-        # except Exception as e:
-        #     print(f"Error saving API dump: {e}")
         
         ev_status = rb.get("evStatus", {})
         odometer_data = rb.get("odometer", {})
@@ -274,8 +357,128 @@ class DashboardView(ft.Container):
         
         if battery is not None:
             self.battery_text.value = f"{battery}%"
+            # Update Progress Ring (0.0 to 1.0)
+            try:
+                self.battery_ring.value = float(battery) / 100.0
+            except:
+                self.battery_ring.value = 0.0
         if range_val is not None:
             self.range_text.value = f"{range_val} miles"
+            
+        # Update Target Charge Level if available (optional display)
+    def open_charge_settings(self, e):
+        # Default value
+        current_target = 80
+        
+        def on_slider_change(e):
+            label.value = f"{int(e.control.value)}%"
+            label.update()
+            
+        slider = ft.Slider(min=50, max=100, divisions=10, value=current_target, label="{value}%", on_change=on_slider_change)
+        label = ft.Text(f"{current_target}%", size=20, weight="bold")
+        
+        def close_dlg(e):
+            dlg.open = False
+            self.main_page.update()
+            
+        def save_target(e):
+            target = int(slider.value)
+            close_dlg(e)
+            
+            # Helper to run async API call
+            async def run_update():
+                snack = ft.SnackBar(ft.Text(f"Setting charge limit to {target}%..."))
+                self.main_page.overlay.append(snack)
+                snack.open = True
+                self.main_page.update()
+                
+                try:
+                    def api_call():
+                         return HondaApi.request_set_charge_target(
+                            self.auth_service.access_token,
+                            self.auth_service.selected_vin,
+                            None, # PIN not strictly required for this specific call in some regions, or we might need to prompt
+                            target
+                        )
+                    
+                    # Run in executor
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, api_call)
+                    
+                    snack.open = False
+                    success_snack = ft.SnackBar(ft.Text("Charge limit updated!"), bgcolor="green")
+                    self.main_page.overlay.append(success_snack)
+                    success_snack.open = True
+                    self.main_page.update()
+                    
+                    # Refresh data
+                    await self._do_refresh()
+                    
+                except Exception as ex:
+                    snack.open = False
+                    err_snack = ft.SnackBar(ft.Text(f"Failed to update: {ex}"), bgcolor="red")
+                    self.main_page.overlay.append(err_snack)
+                    err_snack.open = True
+                    self.main_page.update()
+
+            # Execute async task
+            # self.page.run_task(run_update) # page.run_task not available, use create_task
+            loop = asyncio.get_running_loop()
+            loop.create_task(run_update())
+
+        dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Set Charge Limit"),
+            content=ft.Column([
+                ft.Text("Select target charge percentage:"),
+                ft.Row([slider, label], alignment=ft.MainAxisAlignment.CENTER),
+            ], height=100, tight=True),
+            actions=[
+                ft.TextButton("Cancel", on_click=close_dlg),
+                ft.TextButton("Update", on_click=save_target),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
+        self.main_page.overlay.append(dlg)
+        dlg.open = True
+        self.main_page.update()
+
+    def update_dashboard_ui(self, data):
+        reported = data.get("state", {}).get("reported", {})
+        
+        # Data is inside reported -> responseBody
+        rb = reported.get("responseBody", {})
+        
+        ev_status = rb.get("evStatus", {})
+        odometer_data = rb.get("odometer", {})
+        tire_status = rb.get("tireStatus", {})
+        charge_mode = rb.get("getChargeMode", {})
+        charge_time = rb.get("hvBatteryChargeCompleteTime", {})
+        
+        # Battery & Range
+        battery = ev_status.get("soc")
+        range_val = ev_status.get("evRange")
+        charge_status = ev_status.get("chargeStatus")
+        plug_status = ev_status.get("plugStatus")
+        
+        if battery is not None:
+            self.battery_text.value = f"{battery}%"
+            # Update Progress Ring (0.0 to 1.0)
+            try:
+                self.battery_ring.value = float(battery) / 100.0
+            except:
+                self.battery_ring.value = 0.0
+        if range_val is not None:
+            self.range_text.value = f"{range_val} miles"
+            
+        if range_val is not None:
+            self.range_text.value = f"{range_val} miles"
+            
+        # Update Target Charge Level if available (optional display)
+        # target_level = charge_mode.get("generalAwayTargetChargeLevel", {}).get("value")
+
+        # Charging status & type
 
         # Charging status & type
         status_parts = []
@@ -309,7 +512,38 @@ class DashboardView(ft.Container):
         if display_type:
              status_parts.append(f"via {display_type}")
              
-        self.charge_status_text.value = " ".join(status_parts) if status_parts else "Not Charging"
+        self.charge_status_text.value = " ".join(status_parts) if status_parts else "Not Plugged In"
+
+        # Update Charging Card Styling
+        # Default to inactive (Grey)
+        card_border_color = ft.Colors.GREY_800
+        card_shadow_color = ft.Colors.TRANSPARENT
+        text_color = ft.Colors.GREY_400
+        icon_color = ft.Colors.GREY_700
+        
+        is_plugged_in = plug_status in ["plugged", "CONNECTED", "connected"] or \
+                        (charge_status and charge_status.lower() in ["charging", "plugged", "connected"])
+        
+        if is_plugged_in:
+            card_border_color = ft.Colors.GREEN_400
+            card_shadow_color = ft.Colors.GREEN_900
+            text_color = ft.Colors.GREEN_400
+            icon_color = ft.Colors.GREEN_400
+        
+        # Update styling elements
+        self.charging_card.border = ft.Border.all(1, card_border_color)
+        self.charging_card.shadow.color = card_shadow_color
+        self.charge_status_text.color = text_color
+        # Update icon in charging card (first icon in column -> row -> icon)
+        try:
+             # structure: Container -> Column -> Row -> [Text, Container, Icon]
+             self.charging_card.content.controls[0].controls[2].color = icon_color
+             # structure: Container -> Column -> Row (2nd) -> [Text, Container, Icon]
+             self.charging_card.content.controls[2].controls[2].color = icon_color
+        except Exception as e:
+            print(f"Error updating charging card icons: {e}")
+
+        self.charging_card.update()
 
         # Target and ETA
         target_level = charge_mode.get("generalAwayTargetChargeLevel", {}).get("value")
