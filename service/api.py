@@ -199,26 +199,41 @@ class HondaApi:
         if resp.ok and data.get("status") in ["IN_PROGRESS", "success"]:
             return data["responseBody"]["cigServiceRequestId"]
         else:
+            logger.error(f"Stop Climate Failed - Status: {resp.status_code}, Body: {resp.text}")
             raise Exception(f"Climate stop failed: {data}")
 
-    # Add placeholders for Lock/Unlock/Lights/Horn
-    # These were requested by the user but NOT present in the original JS code.
-    # I am inferring the structure based on the climate endpoints.
-    
-    @staticmethod
-    def request_lock(access_token, vin, pin):
-        # INFERRED ENDPOINT - may need adjustment
-        return HondaApi._generic_remote_command(access_token, vin, pin, "lock", "sec/async/lck")
 
-    @staticmethod
-    def request_unlock(access_token, vin, pin):
-         # INFERRED ENDPOINT - may need adjustment
-        return HondaApi._generic_remote_command(access_token, vin, pin, "unlock", "sec/async/ulk")
     
     @staticmethod
-    def request_lights(access_token, vin, pin):
-         # INFERRED ENDPOINT - may need adjustment
-        return HondaApi._generic_remote_command(access_token, vin, pin, "lights", "lgt/async/on")
+    def request_set_charge_target(access_token, vin, pin, level):
+        url = f"{Config.WSC_HOST}/REST/NGT/TargetChargeLevel/1.0"
+        headers = HondaApi._get_headers({
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "hondaHeaderType.version": "1.0",
+            "hondaHeaderType.siteId": "18d216af12884813987e6b7f75a005a1",
+            "hondaHeaderType.systemId": "com.honda.hondalink.cv_android",
+            "hondaHeaderType.clientType": "Mobile",
+            "hondaHeaderType.messageId": "S-1",
+            "hondaHeaderType.collectedTimeStamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+        
+        resp = requests.post(url, headers=headers, json={
+            "device": vin,
+            "targetChargeLevel": int(level)
+        })
+        
+        data = resp.json()
+        if resp.ok and data.get("status") in ["IN_PROGRESS", "success"]:
+            return data.get("responseBody", {}).get("cigServiceRequestId")
+        else:
+            logger.error(f"Set Charge Target Failed - Status: {resp.status_code}, Body: {resp.text}")
+            raise Exception(f"Set charge target failed: {data}")
+
+
+    
+
 
     @staticmethod
     def _generic_remote_command(access_token, vin, pin, command_name, endpoint_suffix):
@@ -235,7 +250,6 @@ class HondaApi:
             "hondaHeaderType.collectedTimeStamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
         })
          
-         # Payload structure guessed based on climate
          payload = {
              "device": vin,
              "pin": pin
@@ -247,7 +261,7 @@ class HondaApi:
          data = resp.json()
          
          if resp.ok and data.get("status") in ["IN_PROGRESS", "success"]:
-             return data["responseBody"]["cigServiceRequestId"]
+             return data.get("responseBody", {}).get("cigServiceRequestId")
          else:
              raise Exception(f"{command_name} failed: {data}")
 
