@@ -186,8 +186,12 @@ class DashboardView(ft.Container):
             
             # Subscribe to Dashboard
             vin = self.auth_service.selected_vin
-            topic = f"$aws/things/thing_{vin}/shadow/name/DASHBOARD_ASYNC/update"
-            self.mqtt_client.subscribe(topic)
+            topic_dashboard = f"$aws/things/thing_{vin}/shadow/name/DASHBOARD_ASYNC/update"
+            self.mqtt_client.subscribe(topic_dashboard)
+            
+            # Subscribe to Engine Status (for immediate command feedback)
+            topic_engine = f"$aws/things/thing_{vin}/shadow/name/ENGINE_START_STOP_ASYNC/update"
+            self.mqtt_client.subscribe(topic_engine)
             
             self.status_text.value = "Connected. Waiting for data..."
             self.update()
@@ -205,6 +209,9 @@ class DashboardView(ft.Container):
             # Check if it's the dashboard update
             if "DASHBOARD_ASYNC" in topic:
                 self.update_dashboard_ui(data)
+            elif "ENGINE_START_STOP_ASYNC" in topic:
+                print(f"DEBUG: Engine Status Update: {payload}")
+                # Potentially update status/SNACKBAR here
                 
         except Exception as e:
             print(f"Error parsing MQTT message: {e}")
@@ -244,6 +251,14 @@ class DashboardView(ft.Container):
         
         # Data is inside reported -> responseBody
         rb = reported.get("responseBody", {})
+        
+        # Save full response to file for debugging/analysis
+        # try:
+        #     with open("last_api_dump_ON.json", "w") as f:
+        #         json.dump(rb, f, indent=4)
+        #     print("DEBUG: Saved API response to last_api_dump.json")
+        # except Exception as e:
+        #     print(f"Error saving API dump: {e}")
         
         ev_status = rb.get("evStatus", {})
         odometer_data = rb.get("odometer", {})
@@ -339,6 +354,17 @@ class DashboardView(ft.Container):
                 if isinstance(psi, float):
                     text_control.color = "red" if psi < 30 or psi > 45 else None
         
+        # Climate Status
+        # Path: evStatus -> cabinPreconditioningTempCustomSetting (maybe?) 
+        # OR getChargeMode -> cabinPrecondRequest (Found in dump: "OFF")
+        climate_status = "Unknown"
+        if "getChargeMode" in rb:
+             val = rb["getChargeMode"].get("cabinPrecondRequest", {}).get("value")
+             if val:
+                 climate_status = val
+        
+        self.controls_view.update_climate_status(climate_status)
+
         self.status_text.value = "Data Received"
         self.last_updated.value = f"Last Updated: {time.strftime('%I:%M:%S %p')}"
         

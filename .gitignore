@@ -12,3 +12,6 @@ dist/
 # System
 .DS_Store
 Thumbs.db
+
+# Debug
+last_api_dump.json
