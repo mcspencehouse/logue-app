@@ -12,15 +12,14 @@ This project stands on the shoulders of giants:
 
 ### Real-Time Dashboard
 - **Battery & Range**: Instant visibility into State of Charge (SoC) and remaining EV range.
-- **Charging Status**: Detailed information on plug status, charging voltage (120V/240V), and charge completion ETA.
+- **Charging Status**: Detailed information on plug status, complete charging power data (e.g., 120V at 12A), and charge completion ETA formatted in 12-hour AM/PM time.
 - **Tire Pressures**: Real-time PSI monitoring for all four tires.
 - **Odometer**: Current vehicle mileage tracking.
 
 ### Remote Controls (Work in Progress ⚠️)
 *Please note: Remote control features are currently under development and not yet available in the public build.*
-- **Climate Control**: Start/stop charging and set preferred cabin temperature.
+- **Climate Control**: Start/stop climate control and view current status. (Now Working!)
 - **Vehicle Security**: Remote lock and unlock functionality.
-- **Convenience**: Flash lights and honk horn for vehicle location.
 - **Secure PIN Access**: Remote commands are protected by your vehicle's PIN.
 
 ## Tech Stack
@@ -56,19 +55,13 @@ If you prefer to run the app in development mode or build your own APK:
    pip install -r requirements.txt
    ```
 
-3. **Generate Secrets & Configuration**:
-   Run the included helper script to automatically generate your encryption key and set up the default configuration in `.env`:
-   ```bash
-   python3 service/secret_manager.py
-   ```
-   This will create a `.env` file with a secure `ENCRYPTION_KEY` and the default `HONDA_CLIENT_SECRET`.
-
-4. **Run locally**:
+3. **Run locally**:
    ```bash
    flet run main.py
    ```
+   *Note: On first run, the app will automatically generate a secure `ENCRYPTION_KEY` and default configuration in a `.env` file.*
 
-5. **Build your own APK**:
+4. **Build your own APK**:
    ```bash
    flet build apk
    ```

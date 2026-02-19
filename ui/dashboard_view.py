@@ -60,25 +60,62 @@ class DashboardView(ft.Container):
         ], spacing=10)
 
         # Hero Section (Battery & Range)
-        # Hero Section (Battery & Range) - Redesigned
-        
-        # Ring Progress for Battery
-        self.battery_ring = ft.ProgressRing(
-            value=0.0, 
-            stroke_width=20, 
-            color=ft.Colors.CYAN_400, 
-            bgcolor=ft.Colors.WHITE_10,
-            width=250,
-            height=250
+        # Battery Shape Implementation
+        self.battery_progress = ft.ProgressBar(
+            value=0.0,
+            color=ft.Colors.CYAN_800, # Darkened to improve text contrast
+            bgcolor=ft.Colors.TRANSPARENT,
+            height=120,
         )
         
-        # Center Content for Ring
-        ring_content = ft.Column(
+        self.target_marker = ft.Container(
+            width=2,
+            height=120,
+            bgcolor=ft.Colors.WHITE_54,
+            left=0, # Will be calculated percentage
+            border_radius=1
+        )
+
+        battery_body = ft.Stack(
             controls=[
-                ft.Icon(ft.icons.Icons.BOLT, color=ft.Colors.CYAN_400, size=30),
-                self.battery_text,
-                self.range_text,
-                ft.Text("RANGE", size=12, color=ft.Colors.CYAN_100, weight="bold"),
+                # Background
+                ft.Container(
+                    width=250,
+                    height=120,
+                    bgcolor=ft.Colors.WHITE_10,
+                    border_radius=8,
+                    border=ft.Border.all(2, ft.Colors.WHITE_24),
+                ),
+                # The filling progress bar
+                ft.Container(
+                    width=246, # slightly smaller than parent to fit inside border
+                    height=116,
+                    left=2,
+                    top=2,
+                    content=self.battery_progress,
+                    border_radius=6,
+                    clip_behavior=ft.ClipBehavior.HARD_EDGE
+                ),
+                # Target Line overlaid
+                self.target_marker,
+            ],
+            width=250,
+            height=120
+        )
+        
+        # Center Content for Battery
+        battery_info = ft.Container(
+            content=ft.Row([
+                ft.Row([
+                    ft.Icon(ft.icons.Icons.BOLT, color=ft.Colors.CYAN_400, size=24),
+                    ft.Column([
+                        self.battery_text,
+                        ft.Row([
+                           self.range_text,
+                        ], alignment=ft.MainAxisAlignment.START, spacing=0),
+                    ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.START, spacing=0),
+                ], alignment=ft.MainAxisAlignment.START),
+                ft.Container(expand=True),
                 ft.IconButton(
                     icon=ft.icons.Icons.SETTINGS, 
                     icon_color=ft.Colors.WHITE_54, 
@@ -86,35 +123,37 @@ class DashboardView(ft.Container):
                     tooltip="Set Charge Limit",
                     on_click=self.open_charge_settings
                 )
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=0
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            padding=ft.padding.only(left=20, right=10),
+            width=250,
+            height=120
         )
 
-        # Main Battery Indicator Stack
-        battery_indicator = ft.Stack(
+        battery_body.controls.append(battery_info) # Add text overlay as final layer
+
+        battery_tip = ft.Container(
+            width=10,
+            height=40, # Also increase the proportional height of the tip
+            bgcolor=ft.Colors.WHITE_24,
+            border_radius=ft.border_radius.only(top_right=4, bottom_right=4)
+        )
+
+        battery_graphic = ft.Row(
+            controls=[battery_body, battery_tip],
+            spacing=0,
+            alignment=ft.MainAxisAlignment.CENTER,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER
+        )
+
+        # Main Battery Indicator Component
+        battery_indicator = ft.Column(
             controls=[
-                # Glow effect container
-                ft.Container(
-                    width=250, height=250,
-                    border_radius=125,
-                    shadow=ft.BoxShadow(
-                        spread_radius=0,
-                        blur_radius=50,
-                        color=ft.Colors.CYAN_900,
-                        offset=ft.Offset(0, 0),
-                    ),
-                ),
-                self.battery_ring,
-                ft.Container(
-                    content=ring_content,
-                    alignment=ft.Alignment(0, 0),
-                    width=250, 
-                    height=250
-                )
+                ft.Container(height=10), 
+                battery_graphic,
+                ft.Container(height=10),
             ],
-            alignment=ft.Alignment(0, 0)
+            alignment=ft.MainAxisAlignment.CENTER,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER
         )
 
         # Header Row
@@ -204,6 +243,11 @@ class DashboardView(ft.Container):
                 header_row,
                 ft.Container(height=20),
                 battery_indicator,
+                ft.Container(height=10),
+                ft.Row([
+                    self.status_text,
+                    self.last_updated
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
                 ft.Container(height=30),
                 self.charging_card,
                 ft.Container(height=10),
@@ -211,11 +255,7 @@ class DashboardView(ft.Container):
                 self.controls_view, 
                 ft.Container(height=10),
                 self.tire_section_container,
-                ft.Container(height=10),
-                ft.Row([
-                    self.status_text,
-                    self.last_updated
-                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10)
+                ft.Container(height=10)
             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.only(top=50, left=20, right=20, bottom=20),
             gradient=ft.LinearGradient(
@@ -513,13 +553,24 @@ class DashboardView(ft.Container):
         charge_status = ev_status.get("chargeStatus")
         plug_status = ev_status.get("plugStatus")
         
+        target_level = charge_mode.get("generalAwayTargetChargeLevel", {}).get("value")
+        if target_level is not None:
+            try:
+                target_float = float(target_level) / 100.0
+                # Calculate pixel position for absolute left offset (based on 250px container width)
+                # Example: 80% of 250px = 200px
+                self.target_marker.left = (250 * target_float) - 1 # -1 to roughly center the 2px marker 
+            except:
+                self.target_marker.left = 0
+
         if battery is not None:
             self.battery_text.value = f"{battery}%"
-            # Update Progress Ring (0.0 to 1.0)
+            # Update Progress Bar (0.0 to 1.0)
             try:
-                self.battery_ring.value = float(battery) / 100.0
+                bat_val = float(battery) / 100.0
+                self.battery_progress.value = bat_val
             except:
-                self.battery_ring.value = 0.0
+                self.battery_progress.value = 0.0
         if range_val is not None:
             self.range_text.value = f"{range_val} miles"
             
@@ -540,6 +591,8 @@ class DashboardView(ft.Container):
                 status_parts.append("Charging")
             elif cs_lower in ["plugged", "connected"]:
                 status_parts.append("Plugged In")
+            elif cs_lower == "unconnected":
+                status_parts.append("Unplugged")
             else:
                 status_parts.append(charge_status.capitalize())
 
@@ -563,7 +616,7 @@ class DashboardView(ft.Container):
         if display_type:
              status_parts.append(f"via {display_type}")
              
-        self.charge_status_text.value = " ".join(status_parts) if status_parts else "Not Plugged In"
+        self.charge_status_text.value = " ".join(status_parts) if status_parts else "Unplugged"
 
         # Update Charging Card Styling
         # Default to inactive (Grey)
@@ -603,18 +656,35 @@ class DashboardView(ft.Container):
         eta_min = charge_time.get("hvBatteryChargeCompleteMinute", {}).get("value")
 
         details = []
+        
+        # Add charging speed (e.g. 235v at 12A) when actively charging
+        if charge_status and charge_status.lower() == "charging":
+            volts = rb.get("getChargeMode", {}).get("chargeModeAcVoltage", {}).get("value")
+            amps = rb.get("getChargeMode", {}).get("chargeModeAcAmperage", {}).get("value")
+            if volts and amps:
+                details.append(f"{volts}V at {amps}A")
+
         if target_level:
             details.append(f"Target: {target_level}%")
-        if eta_day and eta_hour is not None and eta_min is not None:
-            try:
-                h = int(eta_hour)
-                ampm = "AM" if h < 12 else "PM"
-                h12 = h % 12
-                if h12 == 0:
-                    h12 = 12
-                details.append(f"ETA: {eta_day} {h12}:{str(eta_min).zfill(2)} {ampm}")
-            except:
-                details.append(f"ETA: {eta_day} {eta_hour}:{str(eta_min).zfill(2)}")
+
+        is_at_target = False
+        try:
+            if battery is not None and target_level is not None:
+                is_at_target = int(battery) >= int(target_level)
+        except Exception:
+            pass
+
+        if is_plugged_in and not is_at_target:
+            if eta_day and eta_hour is not None and eta_min is not None:
+                try:
+                    h = int(eta_hour)
+                    ampm = "AM" if h < 12 else "PM"
+                    h12 = h % 12
+                    if h12 == 0:
+                        h12 = 12
+                    details.append(f"ETA: {eta_day} {h12}:{str(eta_min).zfill(2)} {ampm}")
+                except:
+                    details.append(f"ETA: {eta_day} {eta_hour}:{str(eta_min).zfill(2)}")
         
         self.charge_details_text.value = " • ".join(details) if details else ""
 
