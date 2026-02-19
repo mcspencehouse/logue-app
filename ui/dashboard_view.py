@@ -176,7 +176,8 @@ class DashboardView(ft.Container):
         )
 
         # Climate Control Section
-        self.controls_view = ControlsView(page, self.auth_service, self.mqtt_client)
+        # Climate Control Section
+        self.controls_view = ControlsView(page, self.auth_service, self.mqtt_client, on_refresh=self.refresh_data)
 
         # Vehicle Image / Tire Pressure Section
         # This mirrors the bottom of the mockup
@@ -238,8 +239,38 @@ class DashboardView(ft.Container):
     def did_mount(self):
         # Start connection in background
         self.page.run_task(self.connect_and_subscribe)
+        # Start auto-refresh
+        self.running = True
+        self.page.run_task(self.auto_refresh_loop)
+
+    def auto_refresh_loop(self):
+        import asyncio
+        while self.running:
+            # Wait 60 seconds
+            import time
+            time.sleep(60) 
+            # ideally use asyncio.sleep but run_task might be threaded or async. 
+            # If run_task expects a coroutine, we should use await asyncio.sleep
+            # Let's assume it supports async since connect_and_subscribe is async.
+            # But wait, did_mount is sync. 
+            # Correction: Flet run_task handles both. Let's make this async to be safe and non-blocking.
+            if self.running and self.is_connected:
+                # We need to call refresh_data which is async.
+                # Since we are likely in a threaded wrapper or async task, we need to be careful.
+                # self.refresh_data accepts an event 'e', we can pass None.
+                # However, calling async from sync or vice-versa...
+                # Let's re-write this whole method to be async.
+                pass
+
+    async def auto_refresh_loop(self):
+        while self.running:
+            await asyncio.sleep(60)
+            if self.running:
+                print("DEBUG: Auto-refresh triggered")
+                await self.refresh_data(None)
 
     def will_unmount(self):
+        self.running = False
         if self.mqtt_client:
             self.mqtt_client.disconnect()
 
@@ -321,11 +352,31 @@ class DashboardView(ft.Container):
             loop = getattr(self, 'loop', asyncio.get_running_loop())
             
             def request_task():
+                # Dashboard async request
                 HondaApi.request_dashboard(
                     self.auth_service.access_token,
                     self.auth_service.selected_vin
                 )
-            
+                
+                # Fetch Climate Status (Sync/Direct)
+                try:
+                    climate_data = HondaApi.get_climate_status(
+                        self.auth_service.access_token,
+                        self.auth_service.selected_vin
+                    )
+                    # We can update climate status directly here or pass it to a handler
+                    # Since we are in a thread, we should schedule a UI update
+                    if climate_data:
+                         # Schedule UI update for climate
+                         def update_climate_ui():
+                             self.controls_view.update_climate_status(climate_data)
+                         
+                         if getattr(self, 'loop', None):
+                             self.loop.call_soon_threadsafe(update_climate_ui)
+                             
+                except Exception as e:
+                    print(f"Climate Status Error: {e}")
+
             await loop.run_in_executor(None, request_task)
             
         except Exception as e:

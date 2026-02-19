@@ -44,30 +44,20 @@ class CounterControl(ft.Row):
         return self.current_value
 
 class ControlsView(ft.Column): # Changed from Card to Column for transparency
-    def __init__(self, page, auth_service: AuthService, mqtt_client):
+    def __init__(self, page, auth_service: AuthService, mqtt_client, on_refresh=None):
         super().__init__()
         self.main_page = page
         self.auth_service = auth_service
         self.mqtt_client = mqtt_client
+        self.on_refresh = on_refresh
+        self.current_climate_status = "OFF"
         self.spacing = 15
         
         # Modern Counter Controls
         self.temp_control = CounterControl(value=72, min_value=57, max_value=87, step=1, unit="°F")
         
         # Helper to create styled action buttons
-        def action_button(text, icon, color, on_click):
-             return ft.Container(
-                content=ft.Row([
-                    ft.Icon(icon, color=ft.Colors.WHITE),
-                    ft.Text(text, weight="bold", color=ft.Colors.WHITE)
-                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
-                on_click=on_click,
-                bgcolor=color,
-                padding=15,
-                border_radius=10,
-                expand=True,
-                ink=True
-             )
+
 
         # Climate Controls Section
         climate_section = ft.Container(
@@ -80,8 +70,8 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
                 self.temp_control,
                 ft.Container(height=10),
                 ft.Row([
-                    action_button("ON", ft.icons.Icons.POWER_SETTINGS_NEW, ft.Colors.CYAN_400, lambda _: self.confirm_action("Start Climate", self.start_climate)),
-                    action_button("OFF", ft.icons.Icons.POWER_OFF, ft.Colors.RED_900 if False else ft.Colors.GREY_800, lambda _: self.confirm_action("Stop Climate", self.stop_climate))
+                    self._create_action_button("ON", ft.icons.Icons.POWER_SETTINGS_NEW, ft.Colors.CYAN_400, self._handle_start_click),
+                    self._create_action_button("OFF", ft.icons.Icons.POWER_OFF, ft.Colors.RED_900 if False else ft.Colors.GREY_800, self._handle_stop_click)
                 ], spacing=10)
             ]),
             padding=20,
@@ -95,8 +85,21 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
             climate_section
         ]
 
-    def confirm_action(self, action_name, action_callback, require_pin=True):
-        print(f"DEBUG: confirm_action triggered for {action_name}")
+    def _create_action_button(self, text, icon, color, on_click):
+        return ft.Container(
+            content=ft.Row([
+                ft.Icon(icon, color=ft.Colors.WHITE),
+                ft.Text(text, weight="bold", color=ft.Colors.WHITE)
+            ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+            on_click=on_click,
+            bgcolor=color,
+            padding=15,
+            border_radius=10,
+            expand=True,
+            ink=True
+        )
+
+    def _show_confirm_dialog(self, action_name, action_callback, require_pin=True):
         
         content_controls = [ft.Text("Please confirm to execute this command.")]
         pin_input = None
@@ -120,7 +123,8 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
                 
             close_dlg(e)
             # Run async action
-            self.main_page.run_task(self.perform_action, action_name, action_callback, pin)
+            target = self._get_target_status(action_name)
+            self.main_page.run_task(self.perform_action, action_name, action_callback, pin, target)
 
         dlg = ft.AlertDialog(
             modal=True,
@@ -142,13 +146,19 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         if require_pin:
             self.main_page.run_task(self._prefill_pin, pin_input)
 
+    # Helper to deduce target status
+    def _get_target_status(self, action_name):
+        if "Start" in action_name: return "ON"
+        if "Stop" in action_name: return "OFF"
+        return None
+
     async def _prefill_pin(self, pin_input):
         stored_pin = await self.auth_service.storage.get("honda_pin")
         if stored_pin:
             pin_input.value = stored_pin
             self.main_page.update()
 
-    async def perform_action(self, name, callback, pin):
+    async def perform_action(self, name, callback, pin, target_status=None):
         # Show loading
         loading_snack = ft.SnackBar(ft.Text(f"Sending {name} command..."), duration=30000) # Long duration until replaced
         self.main_page.overlay.append(loading_snack)
@@ -180,6 +190,9 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         
         if success:
              snack = ft.SnackBar(ft.Text(f"{name} command sent successfully!"), bgcolor="green")
+             # Start aggressive polling to update status
+             if self.on_refresh:
+                 self.main_page.run_task(self.start_polling, target_status)
         else:
              snack = ft.SnackBar(ft.Text(f"{name} failed: {error}"), bgcolor="red")
             
@@ -189,13 +202,45 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         snack.open = True
         self.main_page.update()
 
+    async def start_polling(self, target_status=None):
+        import asyncio
+        print(f"DEBUG: Starting aggressive polling. Target: {target_status}, Current: {self.current_climate_status}")
+        # Poll every 5 seconds for 60 seconds
+        for i in range(12):
+            # Check if we reached target before waiting
+            if target_status and self.current_climate_status == target_status:
+                print(f"DEBUG: Target status '{target_status}' reached. Stopping polling.")
+                break
+
+            await asyncio.sleep(5)
+            
+            # Check after waiting (and before refreshing again, though we usually refresh to get new status)
+            # Actually we refresh then check. But since this is a loop:
+            # Wait -> Refresh -> Check (in next iteration or here?)
+            # The refresh updates 'current_climate_status' via 'update_climate_status' method.
+            # So we check *after* refresh.
+            
+            print(f"DEBUG: Polling attempt {i+1}/12")
+            if self.on_refresh:
+                await self.on_refresh(None)
+            
+            # Allow a small delay for the refresh to process and update state?
+            # Since on_refresh is awaited and calls update_climate_status synchronously (likely), 
+            # we should be up to date here.
+            
+            if target_status and self.current_climate_status == target_status:
+                print(f"DEBUG: Target status '{target_status}' reached. Stopping polling.")
+                break
+
+    def _handle_start_click(self, e):
+        self._show_confirm_dialog("Start Climate", self.start_climate)
+
+    def _handle_stop_click(self, e):
+        self._show_confirm_dialog("Stop Climate", self.stop_climate)
+
     def start_climate(self, pin):
         temp = int(self.temp_control.value)
-        # TODO: integrate with MQTT client to listen for success?
-        # For now just fire and forget the HTTP request as per `api.py`
-        # Ideally we wait for MQTT confirmation like in Node.js version.
-        # But for basics, this works. Api.request_start_climate returns request ID.
-        res = HondaApi.request_start_climate(
+        return HondaApi.request_start_climate(
             self.auth_service.access_token,
             self.auth_service.selected_vin,
             pin,
@@ -203,7 +248,7 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         )
 
     def stop_climate(self, pin):
-        res = HondaApi.request_stop_climate(
+        return HondaApi.request_stop_climate(
             self.auth_service.access_token,
             self.auth_service.selected_vin,
             pin,
@@ -212,13 +257,84 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
 
     # Removed non-functional buttons logic
 
-    def update_climate_status(self, status):
-        pass
-        # self.climate_status_text.value = f"Status: {status}"
-        # if status.upper() == "ON":
-        #     self.climate_status_text.color = ft.Colors.GREEN_400
-        # elif status.upper() == "OFF":
-        #      self.climate_status_text.color = ft.Colors.GREY_400
-        # else:
-        #      self.climate_status_text.color = ft.Colors.ORANGE_400
-        # self.climate_status_text.update()
+    def update_climate_status(self, data):
+
+        
+        status_text = "OFF"
+        is_on = False
+        
+        try:
+             # Case 1: Direct dictionary with 'climateStatus' (Observed in logs)
+             # {'vin': '...', 'climateStatus': 'OFF', ...}
+             if isinstance(data, dict):
+                 climate_status = data.get("climateStatus")
+                 if climate_status:
+                     if climate_status.upper() != "OFF":
+                         status_text = climate_status.upper()
+                         is_on = True
+                     else:
+                         status_text = "OFF"
+                         is_on = False
+                 
+                 # Fallback: check nested success/started (Legacy/Hypothetical)
+                 elif data.get("status") == "success":
+                     # No specific parsing for this yet as we haven't seen it for this endpoint
+                     pass
+
+             # Case 2: Simple string
+             elif isinstance(data, str):
+                 if data.upper() != "OFF":
+                     status_text = data.upper()
+                     is_on = True
+
+        except Exception as e:
+            print(f"Error parsing climate status: {e}")
+        
+        # Update internal state
+        self.current_climate_status = status_text
+
+        # Update UI in Climate Section
+        try:
+            # Safely find the header row
+            if not self.controls:
+                print("DEBUG: No controls in ControlsView")
+                return
+
+            climate_container = self.controls[0]
+            if not isinstance(climate_container, ft.Container):
+                print("DEBUG: First control is not Container")
+                return
+                
+            climate_column = climate_container.content
+            if not isinstance(climate_column, ft.Column):
+                print("DEBUG: Container content is not Column")
+                return
+                
+            # Finding header row (should be first control in column)
+            header_row = None
+            if climate_column.controls:
+                header_row = climate_column.controls[0]
+            
+            if not isinstance(header_row, ft.Row):
+                print("DEBUG: First item in Column is not Row")
+                return
+
+            # Update elements
+            icon = header_row.controls[0]
+            title_text = header_row.controls[1]
+            
+            if is_on:
+                title_text.value = f"CLIMATE CONTROL: {status_text}"
+                title_text.color = ft.Colors.GREEN_400
+                icon.color = ft.Colors.GREEN_400
+            else:
+                 title_text.value = "CLIMATE CONTROL: OFF"
+                 title_text.color = ft.Colors.WHITE_70
+                 icon.color = ft.Colors.CYAN_200
+            
+            title_text.update()
+            icon.update()
+            
+        except Exception as e:
+            print(f"Error updating climate UI: {e}")
+
