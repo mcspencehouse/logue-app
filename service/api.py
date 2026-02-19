@@ -265,3 +265,25 @@ class HondaApi:
          else:
              raise Exception(f"{command_name} failed: {data}")
 
+    @staticmethod
+    def get_climate_status(access_token, vin):
+        url = f"{Config.WSC_HOST}/REST/NGT/getClimateStatus/1.0/{vin}"
+        headers = HondaApi._get_headers({
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "hondaHeaderType.version": "1.0",
+            "hondaHeaderType.siteId": "18d216af12884813987e6b7f75a005a1",
+            "hondaHeaderType.systemId": "com.honda.hondalink.cv_android",
+            "hondaHeaderType.clientType": "Mobile",
+            "hondaHeaderType.messageId": str(uuid.uuid4()),
+            "hondaHeaderType.collectedTimeStamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        })
+        
+        logger.debug(f"Requesting Climate Status: {url}")
+        resp = requests.get(url, headers=headers)
+        logger.debug(f"Climate Status Response - Status: {resp.status_code}, Body: {resp.text}")
+        
+        resp.raise_for_status()
+        return resp.json()
+
