@@ -202,9 +202,7 @@ class HondaApi:
             logger.error(f"Stop Climate Failed - Status: {resp.status_code}, Body: {resp.text}")
             raise Exception(f"Climate stop failed: {data}")
 
-    # Add placeholders for Lock/Unlock
-    # These were requested by the user but NOT present in the original JS code.
-    # I am inferring the structure based on the climate endpoints.
+
     
     @staticmethod
     def request_set_charge_target(access_token, vin, pin, level):
@@ -233,13 +231,7 @@ class HondaApi:
             logger.error(f"Set Charge Target Failed - Status: {resp.status_code}, Body: {resp.text}")
             raise Exception(f"Set charge target failed: {data}")
 
-    @staticmethod
-    def request_lock(access_token, vin, pin):
-        return HondaApi._generic_remote_command(access_token, vin, pin, "lock", "sec/async/lck")
 
-    @staticmethod
-    def request_unlock(access_token, vin, pin):
-        return HondaApi._generic_remote_command(access_token, vin, pin, "unlock", "sec/async/ulk")
     
 
 
