@@ -71,7 +71,31 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
                 ft.Container(height=10),
                 ft.Row([
                     self._create_action_button("ON", ft.icons.Icons.POWER_SETTINGS_NEW, ft.Colors.CYAN_400, self._handle_start_click),
-                    self._create_action_button("OFF", ft.icons.Icons.POWER_OFF, ft.Colors.RED_900 if False else ft.Colors.GREY_800, self._handle_stop_click)
+                    self._create_action_button("OFF", ft.icons.Icons.POWER_OFF, ft.Colors.RED_900, self._handle_stop_click)
+                ], spacing=10)
+            ]),
+            padding=20,
+            border_radius=15,
+            bgcolor=ft.Colors.WHITE_10,
+            border=ft.Border.all(1, ft.Colors.WHITE_10)
+        )
+
+        # Vehicle Remote Controls Section
+        remote_section = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.icons.Icons.SMARTPHONE, color=ft.Colors.AMBER_300),
+                    ft.Text("REMOTE COMMANDS", size=12, weight="bold", color=ft.Colors.WHITE_70)
+                ]),
+                ft.Container(height=10),
+                ft.Row([
+                    self._create_action_button("LOCK", ft.icons.Icons.LOCK, ft.Colors.ORANGE_800, self._handle_lock_click),
+                    self._create_action_button("UNLOCK", ft.icons.Icons.LOCK_OPEN, ft.Colors.GREEN_700, self._handle_unlock_click),
+                ], spacing=10),
+                ft.Container(height=10),
+                ft.Row([
+                    self._create_action_button("LIGHTS", ft.icons.Icons.LIGHTBULB_CIRCLE, ft.Colors.AMBER_600, self._handle_lights_click),
+                    self._create_action_button("HORN", ft.icons.Icons.CAMPAIGN, ft.Colors.RED_700, self._handle_horn_click)
                 ], spacing=10)
             ]),
             padding=20,
@@ -81,7 +105,9 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         )
 
 
+
         self.controls = [
+            remote_section,
             climate_section
         ]
 
@@ -238,6 +264,18 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
     def _handle_stop_click(self, e):
         self._show_confirm_dialog("Stop Climate", self.stop_climate)
 
+    def _handle_lights_click(self, e):
+        self._show_confirm_dialog("Flash Lights", self.flash_lights)
+
+    def _handle_horn_click(self, e):
+        self._show_confirm_dialog("Sound Horn", self.sound_horn)
+
+    def _handle_lock_click(self, e):
+        self._show_confirm_dialog("Lock Doors", self.lock_doors)
+
+    def _handle_unlock_click(self, e):
+        self._show_confirm_dialog("Unlock Doors", self.unlock_doors)
+
     def start_climate(self, pin):
         temp = int(self.temp_control.value)
         return HondaApi.request_start_climate(
@@ -253,6 +291,38 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
             self.auth_service.selected_vin,
             pin,
             72 # Dummy temp
+        )
+
+    def flash_lights(self, pin):
+        return HondaApi.request_light_horn(
+            self.auth_service.access_token,
+            self.auth_service.selected_vin,
+            pin,
+            "lgt"
+        )
+
+    def sound_horn(self, pin):
+        return HondaApi.request_light_horn(
+            self.auth_service.access_token,
+            self.auth_service.selected_vin,
+            pin,
+            "hrn"
+        )
+
+    def lock_doors(self, pin):
+        return HondaApi.request_door_lock(
+            self.auth_service.access_token,
+            self.auth_service.selected_vin,
+            pin,
+            "alk"
+        )
+
+    def unlock_doors(self, pin):
+        return HondaApi.request_door_lock(
+            self.auth_service.access_token,
+            self.auth_service.selected_vin,
+            pin,
+            "dulk"
         )
 
     # Removed non-functional buttons logic
