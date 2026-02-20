@@ -60,7 +60,7 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
 
 
         # Climate Controls Section
-        climate_section = ft.Container(
+        self.climate_section = ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Icon(ft.icons.Icons.THERMOSTAT, color=ft.Colors.CYAN_200),
@@ -70,7 +70,7 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
                 self.temp_control,
                 ft.Container(height=10),
                 ft.Row([
-                    self._create_action_button("ON", ft.icons.Icons.POWER_SETTINGS_NEW, ft.Colors.CYAN_400, self._handle_start_click),
+                    self._create_action_button("ON", ft.icons.Icons.POWER_SETTINGS_NEW, ft.Colors.CYAN_800, self._handle_start_click),
                     self._create_action_button("OFF", ft.icons.Icons.POWER_OFF, ft.Colors.RED_900, self._handle_stop_click)
                 ], spacing=10)
             ]),
@@ -81,7 +81,7 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         )
 
         # Vehicle Remote Controls Section
-        remote_section = ft.Container(
+        self.remote_section = ft.Container(
             content=ft.Column([
                 ft.Row([
                     ft.Icon(ft.icons.Icons.SMARTPHONE, color=ft.Colors.AMBER_300),
@@ -89,13 +89,20 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
                 ]),
                 ft.Container(height=10),
                 ft.Row([
-                    self._create_action_button("LOCK", ft.icons.Icons.LOCK, ft.Colors.ORANGE_800, self._handle_lock_click),
-                    self._create_action_button("UNLOCK", ft.icons.Icons.LOCK_OPEN, ft.Colors.GREEN_700, self._handle_unlock_click),
-                ], spacing=10),
-                ft.Container(height=10),
-                ft.Row([
-                    self._create_action_button("LIGHTS", ft.icons.Icons.LIGHTBULB_CIRCLE, ft.Colors.AMBER_600, self._handle_lights_click),
-                    self._create_action_button("HORN", ft.icons.Icons.CAMPAIGN, ft.Colors.RED_700, self._handle_horn_click)
+                    ft.Container(
+                        content=ft.Column([
+                            self._create_action_button("LOCK", ft.icons.Icons.LOCK, ft.Colors.BLUE_GREY_800, self._handle_lock_click),
+                            self._create_action_button("UNLOCK", ft.icons.Icons.LOCK_OPEN, ft.Colors.BLUE_GREY_700, self._handle_unlock_click),
+                        ], spacing=10),
+                        expand=True
+                    ),
+                    ft.Container(
+                        content=ft.Column([
+                            self._create_action_button("LIGHTS", ft.icons.Icons.LIGHTBULB_CIRCLE, ft.Colors.AMBER_900, self._handle_lights_click),
+                            self._create_action_button("HORN", ft.icons.Icons.CAMPAIGN, ft.Colors.DEEP_ORANGE_900, self._handle_horn_click)
+                        ], spacing=10),
+                        expand=True
+                    )
                 ], spacing=10)
             ]),
             padding=20,
@@ -107,8 +114,8 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
 
 
         self.controls = [
-            remote_section,
-            climate_section
+            self.remote_section,
+            self.climate_section
         ]
 
     def _create_action_button(self, text, icon, color, on_click):
@@ -366,16 +373,11 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         # Update UI in Climate Section
         try:
             # Safely find the header row
-            if not self.controls:
-                print("DEBUG: No controls in ControlsView")
-                return
-
-            climate_container = self.controls[0]
-            if not isinstance(climate_container, ft.Container):
-                print("DEBUG: First control is not Container")
+            if not getattr(self, "climate_section", None):
+                print("DEBUG: No climate_section in ControlsView")
                 return
                 
-            climate_column = climate_container.content
+            climate_column = self.climate_section.content
             if not isinstance(climate_column, ft.Column):
                 print("DEBUG: Container content is not Column")
                 return
