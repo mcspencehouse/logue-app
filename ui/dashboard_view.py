@@ -493,31 +493,6 @@ class DashboardView(ft.Container):
             self.mqtt_client.disconnect()
         if self.on_logout:
             await self.on_logout()
-        
-        
-        ev_status = rb.get("evStatus", {})
-        odometer_data = rb.get("odometer", {})
-        tire_status = rb.get("tireStatus", {})
-        charge_mode = rb.get("getChargeMode", {})
-        charge_time = rb.get("hvBatteryChargeCompleteTime", {})
-        
-        # Battery & Range
-        battery = ev_status.get("soc")
-        range_val = ev_status.get("evRange")
-        charge_status = ev_status.get("chargeStatus")
-        plug_status = ev_status.get("plugStatus")
-        
-        if battery is not None:
-            self.battery_text.value = f"{battery}%"
-            # Update Progress Ring (0.0 to 1.0)
-            try:
-                self.battery_ring.value = float(battery) / 100.0
-            except:
-                self.battery_ring.value = 0.0
-        if range_val is not None:
-            self.range_text.value = f"{range_val} miles"
-            
-        # Update Target Charge Level if available (optional display)
     def open_charge_settings(self, e):
         # Default value
         current_target = 80
