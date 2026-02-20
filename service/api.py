@@ -266,6 +266,20 @@ class HondaApi:
              raise Exception(f"{command_name} failed: {data}")
 
     @staticmethod
+    def request_light_horn(access_token, vin, pin, action):
+        """
+        Action should be 'lgt' (Lights) or 'hrn' (Horn).
+        """
+        return HondaApi._generic_remote_command(access_token, vin, pin, f"Light/Horn ({action})", f"cfhl/async/{action}")
+
+    @staticmethod
+    def request_door_lock(access_token, vin, pin, action):
+        """
+        Action should be 'alk' (Lock) or 'dulk' (Unlock).
+        """
+        return HondaApi._generic_remote_command(access_token, vin, pin, f"Door Lock ({action})", f"lk/async/{action}")
+
+    @staticmethod
     def get_climate_status(access_token, vin):
         url = f"{Config.WSC_HOST}/REST/NGT/getClimateStatus/1.0/{vin}"
         headers = HondaApi._get_headers({
