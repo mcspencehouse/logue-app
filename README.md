@@ -16,10 +16,10 @@ This project stands on the shoulders of giants:
 - **Tire Pressures**: Real-time PSI monitoring for all four tires.
 - **Odometer**: Current vehicle mileage tracking.
 
-### Remote Controls (Work in Progress ⚠️)
-*Please note: Remote control features are currently under development and not yet available in the public build.*
-- **Climate Control**: Start/stop climate control and view current status. (Now Working!)
+### Remote Controls
+- **Climate Control**: Start/stop climate control and view current status.
 - **Vehicle Security**: Remote lock and unlock functionality.
+- **Lights & Horn**: Trigger vehicle lights and horn remotely.
 - **Secure PIN Access**: Remote commands are protected by your vehicle's PIN.
 
 ## Tech Stack
