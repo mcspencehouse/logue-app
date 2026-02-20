@@ -73,7 +73,7 @@ async def main(page: ft.Page):
         # Run login in thread to avoid blocking UI
         import asyncio
         loop = asyncio.get_running_loop()
-        success, message = await loop.run_in_executor(None, lambda: auth_service.login(username, password))
+        success, message = await loop.run_in_executor(None, lambda: auth_service.login(username, password, vin=vin))
         
         if success:
             await on_login_success()

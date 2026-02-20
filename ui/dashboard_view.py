@@ -156,10 +156,29 @@ class DashboardView(ft.Container):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER
         )
 
+        # Vehicle Selection Header
+        if len(self.auth_service.vehicles) > 1:
+            options = []
+            for v in self.auth_service.vehicles:
+                display_name = f"{v.get('ModelYear')} {v.get('DivisionName')} {v.get('ModelCode')}"
+                options.append(ft.dropdown.Option(key=v.get('VIN'), text=display_name))
+            
+            self.vehicle_header = ft.Dropdown(
+                options=options,
+                value=self.auth_service.selected_vin,
+                width=450,
+                text_size=20,
+                color=ft.Colors.CYAN_200,
+                border=ft.InputBorder.NONE,
+                on_select=self.on_vehicle_change
+            )
+        else:
+            self.vehicle_header = ft.Text(self.vehicle_name, size=20, weight="bold", color=ft.Colors.CYAN_200, font_family="Roboto Mono")
+
         # Header Row
         header_row = ft.Row(
             controls=[
-                ft.Text(self.vehicle_name, size=20, weight="bold", color=ft.Colors.CYAN_200, font_family="Roboto Mono"),
+                self.vehicle_header,
                 ft.Container(expand=True),
                 ft.IconButton(
                     icon=ft.icons.Icons.REFRESH,
@@ -426,6 +445,46 @@ class DashboardView(ft.Container):
         self.status_text.value = "Requesting update..."
         self.update()
         await self._do_refresh()
+
+    async def on_vehicle_change(self, e):
+        new_vin = e.control.value
+        if new_vin == self.auth_service.selected_vin:
+            return
+
+        # 1. Disconnect current client if connected
+        self.running = False
+        if self.mqtt_client:
+            self.mqtt_client.disconnect()
+            self.mqtt_client = None
+            self.is_connected = False
+
+        # 2. Update Auth Service
+        self.auth_service.selected_vin = new_vin
+        
+        # 3. Save new default vehicle
+        # We need the current username and password... we don't have them in Memory, 
+        # but they are in SharedPreferences. We can just load and re-save.
+        username, password, _, pin = await self.auth_service.load_credentials()
+        await self.auth_service.save_credentials(username, password, new_vin, pin)
+
+        # 4. Clear Dashboard UI Data
+        self.battery_text.value = "-- %"
+        self.range_text.value = "-- miles"
+        self.charge_status_text.value = "--"
+        self.charge_details_text.value = "--"
+        self.odometer_text.value = "-- miles"
+        self.battery_progress.value = 0.0
+        self.target_marker.left = 0
+        for pos, text_control in self.tire_pressures.items():
+            text_control.value = "-- PSI"
+            text_control.color = None
+        self.status_text.value = "Switching vehicles..."
+        self.main_page.update()
+
+        # 5. Reconnect and Subscribe
+        self.running = True
+        self.page.run_task(self.connect_and_subscribe)
+        self.page.run_task(self.auto_refresh_loop)
 
     async def handle_logout(self, e):
         if self.mqtt_client:

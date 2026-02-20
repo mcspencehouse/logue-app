@@ -103,6 +103,10 @@ class AuthService:
 
     def get_vehicle_name(self):
         if self.vehicles:
+            for v in self.vehicles:
+                if v.get('VIN') == self.selected_vin:
+                    return f"{v.get('ModelYear')} {v.get('DivisionName')} {v.get('ModelCode')}"
+            # Fallback to first if selected_vin is not found for some reason
             v = self.vehicles[0]
             return f"{v.get('ModelYear')} {v.get('DivisionName')} {v.get('ModelCode')}"
         return "Unknown Vehicle"
