@@ -161,12 +161,14 @@ class DashboardView(ft.Container):
             options = []
             for v in self.auth_service.vehicles:
                 display_name = f"{v.get('ModelYear')} {v.get('DivisionName')} {v.get('ModelCode')}"
+                if len(display_name) > 30:
+                    display_name = display_name[:27] + "..."
                 options.append(ft.dropdown.Option(key=v.get('VIN'), text=display_name))
             
             self.vehicle_header = ft.Dropdown(
                 options=options,
                 value=self.auth_service.selected_vin,
-                width=450,
+                width=320,
                 text_size=20,
                 color=ft.Colors.CYAN_200,
                 border=ft.InputBorder.NONE,
