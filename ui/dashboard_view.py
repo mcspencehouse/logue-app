@@ -148,12 +148,11 @@ class DashboardView(ft.Container):
         # Main Battery Indicator Component
         battery_indicator = ft.Column(
             controls=[
-                ft.Container(height=10), 
                 battery_graphic,
-                ft.Container(height=10),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=0
         )
 
         # Vehicle Selection Header
@@ -161,41 +160,46 @@ class DashboardView(ft.Container):
             options = []
             for v in self.auth_service.vehicles:
                 display_name = f"{v.get('ModelYear')} {v.get('DivisionName')} {v.get('ModelCode')}"
-                if len(display_name) > 30:
-                    display_name = display_name[:27] + "..."
                 options.append(ft.dropdown.Option(key=v.get('VIN'), text=display_name))
             
-            self.vehicle_header = ft.Dropdown(
-                options=options,
-                value=self.auth_service.selected_vin,
-                width=320,
-                text_size=20,
-                color=ft.Colors.CYAN_200,
-                border=ft.InputBorder.NONE,
-                on_select=self.on_vehicle_change
-            )
+            self.vehicle_header = ft.Row([
+                ft.Dropdown(
+                    options=options,
+                    value=self.auth_service.selected_vin,
+                    expand=True,
+                    text_size=20,
+                    color=ft.Colors.CYAN_200,
+                    border=ft.InputBorder.NONE,
+                    on_select=self.on_vehicle_change,
+                    content_padding=5
+                )
+            ], alignment=ft.MainAxisAlignment.CENTER)
         else:
-            self.vehicle_header = ft.Text(self.vehicle_name, size=20, weight="bold", color=ft.Colors.CYAN_200, font_family="Roboto Mono")
+            self.vehicle_header = ft.Row([
+                ft.Text(self.vehicle_name, size=20, weight="bold", color=ft.Colors.CYAN_200, font_family="Roboto Mono")
+            ], alignment=ft.MainAxisAlignment.CENTER)
 
         # Header Row
-        header_row = ft.Row(
+        header_row = ft.Column(
             controls=[
                 self.vehicle_header,
-                ft.Container(expand=True),
-                ft.IconButton(
-                    icon=ft.icons.Icons.REFRESH,
-                    icon_color=ft.Colors.WHITE_54,
-                    tooltip="Refresh Data",
-                    on_click=self.refresh_data
-                ),
-                ft.IconButton(
-                    icon=ft.icons.Icons.LOGOUT, # Styled logout
-                    icon_color=ft.Colors.WHITE_54,
-                    tooltip="Logout",
-                    on_click=self.handle_logout
-                )
+                ft.Row([
+                    ft.Container(expand=True),
+                    ft.IconButton(
+                        icon=ft.icons.Icons.REFRESH,
+                        icon_color=ft.Colors.WHITE_54,
+                        tooltip="Refresh Data",
+                        on_click=self.refresh_data
+                    ),
+                    ft.IconButton(
+                        icon=ft.icons.Icons.LOGOUT, # Styled logout
+                        icon_color=ft.Colors.WHITE_54,
+                        tooltip="Logout",
+                        on_click=self.handle_logout
+                    )
+                ], alignment=ft.MainAxisAlignment.END)
             ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            spacing=0  # Reduced from 5 to 0
         )
 
         # Charging Status Card (Mockup Style)
@@ -262,14 +266,14 @@ class DashboardView(ft.Container):
         self.hero_section = ft.Container(
             content=ft.Column([
                 header_row,
-                ft.Container(height=20),
+                ft.Container(height=10),
                 battery_indicator,
                 ft.Container(height=10),
                 ft.Row([
                     self.status_text,
                     self.last_updated
                 ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
-                ft.Container(height=30),
+                ft.Container(height=15),
                 self.charging_card,
                 ft.Container(height=10),
                 # Climate Control is injected via ControlsView
@@ -277,7 +281,7 @@ class DashboardView(ft.Container):
                 ft.Container(height=10),
                 self.tire_section_container,
                 ft.Container(height=10)
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
             padding=ft.padding.only(top=50, left=20, right=20, bottom=20),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment.TOP_CENTER,

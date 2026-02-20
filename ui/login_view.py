@@ -29,8 +29,9 @@ class LoginView(ft.Container):
             horizontal_alignment="center",
             spacing=20
         )
-        self.padding = 50
+        self.padding = 20
         self.alignment = ft.Alignment(0, 0)
+        self.expand = True
 
     def did_mount(self):
         # Load credentials asynchronously

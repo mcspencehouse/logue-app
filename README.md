@@ -2,6 +2,10 @@
 
 Logue is a mobile-first companion application for Honda EV owners (specifically tested with the Honda Prologue). It provides real-time dashboard data and offers a streamlined, Flet-based alternative to official apps.
 
+<p align="center">
+  <img src="assets/screenshot.png" alt="Logue App Screenshot" width="400">
+</p>
+
 ## Credits & Inspiration
 This project stands on the shoulders of giants:
 - **[honstar-mqtt](https://github.com/tsightler/honstar-mqtt)**: A critical resource for understanding the Honda/Acura API and MQTT integration via AWS IoT Core.
