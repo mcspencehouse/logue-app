@@ -52,6 +52,7 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         self.on_refresh = on_refresh
         self.current_climate_status = "OFF"
         self.spacing = 15
+        self.use_metric = False
         
         # Modern Counter Controls
         self.temp_control = CounterControl(value=72, min_value=57, max_value=87, step=1, unit="°F")
@@ -117,6 +118,23 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
             self.remote_section,
             self.climate_section
         ]
+
+    def update_units(self, use_metric: bool):
+        self.use_metric = use_metric
+        # If toggling to metric
+        if use_metric and self.temp_control.unit == "°F":
+            self.temp_control.unit = "°C"
+            self.temp_control.min_value = 14
+            self.temp_control.max_value = 31
+            self.temp_control.current_value = round((self.temp_control.current_value - 32) * 5.0 / 9.0)
+            self.temp_control.update_display()
+        # If toggling to imperial
+        elif not use_metric and self.temp_control.unit == "°C":
+            self.temp_control.unit = "°F"
+            self.temp_control.min_value = 57
+            self.temp_control.max_value = 87
+            self.temp_control.current_value = round((self.temp_control.current_value * 9.0 / 5.0) + 32)
+            self.temp_control.update_display()
 
     def _create_action_button(self, text, icon, color, on_click):
         return ft.Container(
@@ -284,7 +302,13 @@ class ControlsView(ft.Column): # Changed from Card to Column for transparency
         self._show_confirm_dialog("Unlock Doors", self.unlock_doors)
 
     def start_climate(self, pin):
-        temp = int(self.temp_control.value)
+        temp = self.temp_control.value
+        # If metric is used, translate Celsius to Fahrenheit for the API since it expects it in this range
+        if self.use_metric:
+            temp = int(round((temp * 9.0 / 5.0) + 32))
+        else:
+            temp = int(temp)
+            
         return HondaApi.request_start_climate(
             self.auth_service.access_token,
             self.auth_service.selected_vin,

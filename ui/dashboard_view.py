@@ -17,6 +17,8 @@ class DashboardView(ft.Container):
         self.on_logout = on_logout
         self.mqtt_client = None
         self.is_connected = False
+        self.use_metric = False # Initialized in did_mount
+        self.last_api_data = None
         
         # UI Elements
         self.vehicle_name = self.auth_service.get_vehicle_name()
@@ -192,6 +194,12 @@ class DashboardView(ft.Container):
                         on_click=self.refresh_data
                     ),
                     ft.IconButton(
+                        icon=ft.icons.Icons.INFO_OUTLINE,
+                        icon_color=ft.Colors.WHITE_54,
+                        tooltip="Information & Settings",
+                        on_click=self.open_info_settings
+                    ),
+                    ft.IconButton(
                         icon=ft.icons.Icons.LOGOUT, # Styled logout
                         icon_color=ft.Colors.WHITE_54,
                         tooltip="Logout",
@@ -242,6 +250,7 @@ class DashboardView(ft.Container):
         # Climate Control Section
         # Climate Control Section
         self.controls_view = ControlsView(page, self.auth_service, self.mqtt_client, on_refresh=self.refresh_data)
+        self.controls_view.update_units(self.use_metric)
 
         # Vehicle Image / Tire Pressure Section
         # This mirrors the bottom of the mockup
@@ -304,9 +313,16 @@ class DashboardView(ft.Container):
     def did_mount(self):
         # Start connection in background
         self.page.run_task(self.connect_and_subscribe)
+        # Load user settings
+        self.page.run_task(self.load_settings)
         # Start auto-refresh
         self.running = True
         self.page.run_task(self.auto_refresh_loop)
+
+    async def load_settings(self):
+        self.use_metric = await self.auth_service.storage.get("use_metric") == "True"
+        self.controls_view.update_units(self.use_metric)
+        self.main_page.update()
 
     def auto_refresh_loop(self):
         import asyncio
@@ -497,6 +513,59 @@ class DashboardView(ft.Container):
             self.mqtt_client.disconnect()
         if self.on_logout:
             await self.on_logout()
+
+    def open_info_settings(self, e):
+        def on_unit_change(e):
+            self.use_metric = e.control.value
+            self.main_page.run_task(self._save_unit_setting, self.use_metric)
+            self.controls_view.update_units(self.use_metric)
+            if self.last_api_data:
+                self.update_dashboard_ui(self.last_api_data)
+            self.main_page.update()
+
+        unit_toggle = ft.Switch(
+            label="Use Metric Units (KM, °C)",
+            value=self.use_metric,
+            on_change=on_unit_change,
+            active_color=ft.Colors.CYAN_400
+        )
+
+        def close_dlg(e):
+            dlg.open = False
+            self.main_page.update()
+
+        dlg = ft.AlertDialog(
+            modal=True,
+            title=ft.Row([ft.Icon(ft.icons.Icons.INFO), ft.Text("Information & Settings")]),
+            content=ft.Column([
+                ft.Text("App Settings", weight="bold", size=16),
+                unit_toggle,
+                ft.Divider(color=ft.Colors.WHITE_10),
+                ft.Text("Important Information", weight="bold", size=16),
+                ft.Text(
+                    "Some actions may take up to 30 seconds due to how often the vehicle checks for new commands.",
+                    size=13,
+                    color=ft.Colors.WHITE_70
+                ),
+                ft.Container(height=10),
+                ft.TextButton(
+                    content=ft.Row([ft.Icon(ft.icons.Icons.OPEN_IN_NEW, size=16), ft.Text("View on GitHub")]),
+                    on_click=lambda _: self.main_page.launch_url("https://github.com/mcspencehouse/logue-app")
+                )
+            ], tight=True, spacing=10),
+            actions=[
+                ft.TextButton("Close", on_click=close_dlg),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        self.main_page.overlay.append(dlg)
+        dlg.open = True
+        self.main_page.update()
+
+    async def _save_unit_setting(self, use_metric):
+        await self.auth_service.storage.set("use_metric", str(use_metric))
+
     def open_charge_settings(self, e):
         # Default value
         current_target = 80
@@ -576,6 +645,7 @@ class DashboardView(ft.Container):
         self.main_page.update()
 
     def update_dashboard_ui(self, data):
+        self.last_api_data = data
         reported = data.get("state", {}).get("reported", {})
         
         # Data is inside reported -> responseBody
@@ -612,10 +682,15 @@ class DashboardView(ft.Container):
             except:
                 self.battery_progress.value = 0.0
         if range_val is not None:
-            self.range_text.value = f"{range_val} miles"
+            try:
+                rv = float(range_val)
+                if self.use_metric:
+                    self.range_text.value = f"{int(rv * 1.60934)} km"
+                else:
+                    self.range_text.value = f"{int(rv)} miles"
+            except:
+                self.range_text.value = f"{range_val} miles"
             
-        if range_val is not None:
-            self.range_text.value = f"{range_val} miles"
             
         # Update Target Charge Level if available (optional display)
         # target_level = charge_mode.get("generalAwayTargetChargeLevel", {}).get("value")
@@ -730,24 +805,42 @@ class DashboardView(ft.Container):
 
         # Odometer
         odometer = odometer_data.get("value")
+        odometer_unit = odometer_data.get("unit", "Miles").lower()
         if odometer is not None:
-            self.odometer_text.value = f"{odometer} miles"
+            try:
+                ov = float(odometer)
+                if self.use_metric and "mile" in odometer_unit:
+                    self.odometer_text.value = f"{int(ov * 1.60934)} km"
+                elif not self.use_metric and "km" in odometer_unit:
+                    self.odometer_text.value = f"{int(ov / 1.60934)} miles"
+                else:
+                    self.odometer_text.value = f"{int(ov)} {'km' if 'km' in odometer_unit else 'miles'}"
+            except:
+                self.odometer_text.value = f"{odometer} miles"
             
         # Tire Pressures
-        def kpa_to_psi(kpa):
+        def format_pressure(kpa):
             try:
-                return round(float(kpa) * 0.145038, 1)
+                kpa_val = float(kpa)
+                if self.use_metric:
+                    return round(kpa_val), "kPa"
+                else:
+                    return round(kpa_val * 0.145038, 1), "PSI"
             except:
-                return "--"
+                return "--", ""
 
         for pos, text_control in self.tire_pressures.items():
             pressure_kpa = tire_status.get(pos, {}).get("pressureData", {}).get("value")
             if pressure_kpa:
-                text_control.value = f"{kpa_to_psi(pressure_kpa)} PSI"
+                val, unit = format_pressure(pressure_kpa)
+                text_control.value = f"{val} {unit}"
                 # Color based on pressure (simple heuristic)
-                psi = kpa_to_psi(pressure_kpa)
-                if isinstance(psi, float):
+                try:
+                    kpa_val = float(pressure_kpa)
+                    psi = kpa_val * 0.145038
                     text_control.color = "red" if psi < 30 or psi > 45 else None
+                except:
+                    pass
         
         # Climate Status
         # Path: evStatus -> cabinPreconditioningTempCustomSetting (maybe?) 
